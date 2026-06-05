@@ -141,6 +141,13 @@ function exportCSV(data, filename) {
   URL.revokeObjectURL(url)
 }
 
+function exportXLSX(data, filename) {
+  const ws = XLSX.utils.json_to_sheet(data)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Cleaned')
+  XLSX.writeFile(wb, filename)
+}
+
 export default function App() {
   const [stage, setStage] = useState('upload') // upload | tag-confirm | result
   const [dragOver, setDragOver] = useState(false)
@@ -209,6 +216,11 @@ export default function App() {
   const handleExport = () => {
     const base = fileName.replace(/\.[^.]+$/, '')
     exportCSV(cleanedRows, `${base}_cleaned.csv`)
+  }
+
+  const handleExportXLSX = () => {
+    const base = fileName.replace(/\.[^.]+$/, '')
+    exportXLSX(cleanedRows, `${base}_cleaned.xlsx`)
   }
 
   const reset = () => {
@@ -403,7 +415,10 @@ export default function App() {
 
             <div className="action-row">
               <button className="btn btn-primary btn-lg" onClick={handleExport}>
-                ↓ Export cleaned CSV
+                ↓ Export CSV
+              </button>
+              <button className="btn btn-secondary btn-lg" onClick={handleExportXLSX}>
+                ↓ Export XLSX
               </button>
               <button className="btn btn-ghost" onClick={reset}>
                 Clean another file

@@ -174,8 +174,16 @@
 
 .btn-primary {
   background: #3ECF5A;
-  color: #F5F2EE;
+  color: #0D0D0D;
 }
+
+.btn-secondary {
+  background: transparent;
+  color: #3ECF5A;
+  border: 1px solid #3ECF5A;
+}
+
+.btn-secondary:hover { background: rgba(62, 207, 90, 0.08); opacity: 1; }
 
 .btn-ghost {
   background: transparent;
