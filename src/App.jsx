@@ -239,7 +239,7 @@ export default function App() {
       <header className="header">
         <div className="header-inner">
           <span className="logo-mark">◈</span>
-          <h1>Dataset Cleaner</h1>
+          <h1>Contact List Cleaner</h1>
           <span className="subtitle">for Relentless Digital</span>
         </div>
       </header>
