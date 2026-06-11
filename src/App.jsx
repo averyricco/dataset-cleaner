@@ -1,0 +1,461 @@
+import { useState, useCallback } from 'react'
+import * as XLSX from 'xlsx'
+import './App.css'
+
+const CORE_COLS = ['first_name', 'last_name', 'phone', 'email']
+
+function normalizeHeader(h) {
+  return h.toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+}
+
+// Find the first header key that matches any of the given patterns
+function findCol(headers, patterns) {
+  return headers.find(h => patterns.some(p => h === p || h.includes(p)))
+}
+
+function formatE164(raw) {
+  if (!raw) return null
+  const digits = String(raw).replace(/\D/g, '')
+  if (digits.length === 10) return '+1' + digits
+  if (digits.length === 11 && digits[0] === '1') return '+' + digits
+  if (digits.length > 6) return '+' + digits
+  return null
+}
+
+function firstValue(val) {
+  if (val == null) return ''
+  const s = String(val).trim()
+  return s.split(/[;|]/)[0].trim()
+}
+
+function parseName(row, normHeaders, rawHeaders) {
+  const fnKey = findCol(normHeaders, ['first_name', 'firstname', 'first', 'fname', 'given_name'])
+  const lnKey = findCol(normHeaders, ['last_name', 'lastname', 'last', 'lname', 'surname', 'family_name'])
+
+  if (fnKey && lnKey) {
+    return { first_name: firstValue(row[fnKey]), last_name: firstValue(row[lnKey]) }
+  }
+
+  const fullKey = findCol(normHeaders, ['full_name', 'fullname', 'contact_name', 'name', 'customer_name', 'client_name'])
+  if (fullKey && row[fullKey]) {
+    const full = firstValue(row[fullKey])
+    if (full.includes(',')) {
+      const [last, first] = full.split(',').map(s => s.trim())
+      return { first_name: first || '', last_name: last || '' }
+    }
+    const parts = full.trim().split(/\s+/)
+    return { first_name: parts[0] || '', last_name: parts.slice(1).join(' ') || '' }
+  }
+
+  if (fnKey) return { first_name: firstValue(row[fnKey]), last_name: '' }
+
+  // Fallback: try to find columns by checking raw headers for "First Name" / "Last Name" text
+  if (rawHeaders && rawHeaders.length >= 2) {
+    const rawFnIdx = rawHeaders.findIndex(h => /first.?name/i.test(h))
+    const rawLnIdx = rawHeaders.findIndex(h => /last.?name|surname/i.test(h))
+    if (rawFnIdx >= 0 && rawLnIdx >= 0) {
+      const headerVals = Object.values(row)
+      return { first_name: firstValue(headerVals[rawFnIdx] || ''), last_name: firstValue(headerVals[rawLnIdx] || '') }
+    }
+  }
+
+  return { first_name: '', last_name: '' }
+}
+
+function isTagColumn(header) {
+  return /tag|label|category|group|segment/i.test(header)
+}
+
+function cleanData(rows, rawHeaders, keepTagCols) {
+  const normHeaders = rawHeaders.map(normalizeHeader)
+  const tagCols = rawHeaders.filter((_, i) => isTagColumn(normHeaders[i]))
+  const tagColsNorm = tagCols.map(normalizeHeader)
+
+  const summary = {
+    started: rows.length,
+    missingName: 0,
+    missingPhone: 0,
+    badPhone: 0,
+    duplicate: 0,
+    final: 0,
+  }
+
+  const seenPhones = new Set()
+  const cleaned = []
+  const removed = []
+
+  // Find phone and email columns once
+  const phoneKey = findCol(normHeaders, ['phone', 'phone_number', 'phonenumber', 'mobile', 'cell', 'telephone', 'cell_phone', 'mobile_phone', 'contact_phone'])
+  const emailKey = findCol(normHeaders, ['email', 'email_address', 'emailaddress', 'e_mail'])
+
+  for (const rawRow of rows) {
+    const row = {}
+    rawHeaders.forEach((h, i) => { row[normHeaders[i]] = rawRow[h] })
+
+    const { first_name, last_name } = parseName(row, normHeaders, rawHeaders)
+
+    if (!first_name) {
+      summary.missingName++
+      removed.push({ ...row, _reason: 'Missing first name' })
+      continue
+    }
+
+    const phoneRaw = phoneKey ? firstValue(row[phoneKey]) : ''
+    const phone = formatE164(phoneRaw)
+
+    if (!phoneRaw) {
+      summary.missingPhone++
+      removed.push({ ...row, _reason: 'Missing phone' })
+      continue
+    }
+    if (!phone) {
+      summary.badPhone++
+      removed.push({ ...row, _reason: 'Invalid phone format' })
+      continue
+    }
+
+    if (seenPhones.has(phone)) {
+      summary.duplicate++
+      removed.push({ ...row, _reason: 'Duplicate phone' })
+      continue
+    }
+    seenPhones.add(phone)
+
+    const emailRaw = emailKey ? (row[emailKey] || '') : ''
+    const email = firstValue(emailRaw)
+
+    const out = { first_name, last_name, phone, email }
+
+    if (keepTagCols) {
+      tagColsNorm.forEach(tc => {
+        out[tc] = firstValue(row[tc] || '')
+      })
+    }
+
+    cleaned.push(out)
+  }
+
+  summary.final = cleaned.length
+  return { cleaned, removed, summary, tagCols }
+}
+
+function exportCSV(data, filename) {
+  const ws = XLSX.utils.json_to_sheet(data)
+  const csv = XLSX.utils.sheet_to_csv(ws)
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function exportXLSX(data, filename) {
+  const ws = XLSX.utils.json_to_sheet(data)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Cleaned')
+  XLSX.writeFile(wb, filename)
+}
+
+export default function App() {
+  const [stage, setStage] = useState('upload') // upload | tag-confirm | result
+  const [dragOver, setDragOver] = useState(false)
+  const [fileName, setFileName] = useState('')
+  const [rawRows, setRawRows] = useState([])
+  const [rawHeaders, setRawHeaders] = useState([])
+  const [detectedTagCols, setDetectedTagCols] = useState([])
+  const [keepTags, setKeepTags] = useState(true)
+  const [cleanedRows, setCleanedRows] = useState([])
+  const [removedRows, setRemovedRows] = useState([])
+  const [summary, setSummary] = useState(null)
+  const [showRemoved, setShowRemoved] = useState(false)
+
+  const parseFile = useCallback((file) => {
+    setFileName(file.name)
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const data = new Uint8Array(e.target.result)
+      const wb = XLSX.read(data, { type: 'array' })
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      let rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
+      if (!rows.length) return
+
+      let headers = Object.keys(rows[0])
+
+      // Check if first data row looks like column headers
+      const firstRow = rows[0]
+      const firstRowValues = Object.values(firstRow)
+      const looksLikeHeaders = firstRowValues.some(v => /^(first|last|name|phone|email|mobile|contact)/i.test(String(v).trim()))
+
+      if (looksLikeHeaders) {
+        // Use first row values as headers and remove it from data
+        headers = firstRowValues.map(v => String(v).trim())
+        rows = rows.slice(1).map(row => {
+          const newRow = {}
+          headers.forEach((h, i) => {
+            const oldKey = Object.keys(row)[i]
+            newRow[h] = row[oldKey] || ''
+          })
+          return newRow
+        })
+      }
+
+      setRawRows(rows)
+      setRawHeaders(headers)
+
+      const normHeaders = headers.map(normalizeHeader)
+      const tagCols = headers.filter((_, i) => isTagColumn(normHeaders[i]))
+      setDetectedTagCols(tagCols)
+
+      if (tagCols.length > 0) {
+        setStage('tag-confirm')
+      } else {
+        const { cleaned, removed, summary } = cleanData(rows, headers, false)
+        setCleanedRows(cleaned)
+        setRemovedRows(removed)
+        setSummary(summary)
+        setStage('result')
+      }
+    }
+    reader.readAsArrayBuffer(file)
+  }, [])
+
+  const onDrop = useCallback((e) => {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files[0]
+    if (file) parseFile(file)
+  }, [parseFile])
+
+  const onFileInput = (e) => {
+    const file = e.target.files[0]
+    if (file) parseFile(file)
+  }
+
+  const confirmTags = (keep) => {
+    setKeepTags(keep)
+    const { cleaned, removed, summary } = cleanData(rawRows, rawHeaders, keep)
+    setCleanedRows(cleaned)
+    setRemovedRows(removed)
+    setSummary(summary)
+    setStage('result')
+  }
+
+  const handleExport = () => {
+    const base = fileName.replace(/\.[^.]+$/, '')
+    exportCSV(cleanedRows, `${base}_cleaned.csv`)
+  }
+
+  const handleExportXLSX = () => {
+    const base = fileName.replace(/\.[^.]+$/, '')
+    exportXLSX(cleanedRows, `${base}_cleaned.xlsx`)
+  }
+
+  const reset = () => {
+    setStage('upload')
+    setFileName('')
+    setRawRows([])
+    setRawHeaders([])
+    setCleanedRows([])
+    setRemovedRows([])
+    setSummary(null)
+    setShowRemoved(false)
+  }
+
+  return (
+    <div className="app">
+      <header className="header">
+        <div className="header-inner">
+          <span className="logo-mark">◈</span>
+          <h1>Contact List Cleaner</h1>
+          <span className="subtitle">for Relentless Digital</span>
+        </div>
+      </header>
+
+      <main className="main">
+        {stage === 'upload' && (
+          <div className="card upload-card">
+            <h2>Upload your contact list</h2>
+            <p className="hint">Accepts CSV, XLSX, or XLS</p>
+            <div
+              className={`dropzone${dragOver ? ' dragover' : ''}`}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onDrop}
+              onClick={() => document.getElementById('file-input').click()}
+            >
+              <div className="drop-icon">↑</div>
+              <p>Drag & drop your file here</p>
+              <p className="drop-sub">or click to browse</p>
+              <input
+                id="file-input"
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                style={{ display: 'none' }}
+                onChange={onFileInput}
+              />
+            </div>
+            <div className="rules-list">
+              <h3>Cleaning rules applied</h3>
+              <ul>
+                <li>Split full names into first / last columns</li>
+                <li>Format phones to E.164 (+1XXXXXXXXXX)</li>
+                <li>Keep only first value in multi-value cells</li>
+                <li>Remove rows missing first name or phone</li>
+                <li>Deduplicate by phone (keep first occurrence)</li>
+                <li>Drop irrelevant columns</li>
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {stage === 'tag-confirm' && (
+          <div className="card tag-card">
+            <h2>Tag columns detected</h2>
+            <p className="hint">The following columns look like tags or labels:</p>
+            <div className="tag-cols">
+              {detectedTagCols.map(c => (
+                <span key={c} className="tag-badge">{c}</span>
+              ))}
+            </div>
+            <p className="tag-question">Would you like to keep these columns in the export?</p>
+            <div className="btn-row">
+              <button className="btn btn-primary" onClick={() => confirmTags(true)}>Keep tags</button>
+              <button className="btn btn-ghost" onClick={() => confirmTags(false)}>Drop tags</button>
+            </div>
+          </div>
+        )}
+
+        {stage === 'result' && summary && (
+          <div className="results">
+            <div className="card summary-card">
+              <h2>Cleaning Summary</h2>
+              <div className="stats-grid">
+                <div className="stat">
+                  <span className="stat-num">{summary.started}</span>
+                  <span className="stat-label">Rows started</span>
+                </div>
+                <div className="stat stat-final">
+                  <span className="stat-num">{summary.final}</span>
+                  <span className="stat-label">Final rows</span>
+                </div>
+                <div className="stat stat-removed">
+                  <span className="stat-num">{summary.started - summary.final}</span>
+                  <span className="stat-label">Rows removed</span>
+                </div>
+              </div>
+              <div className="breakdown">
+                <h3>Removed breakdown</h3>
+                <div className="breakdown-rows">
+                  {summary.missingName > 0 && (
+                    <div className="breakdown-row">
+                      <span>Missing first name</span>
+                      <span className="breakdown-num">{summary.missingName}</span>
+                    </div>
+                  )}
+                  {summary.missingPhone > 0 && (
+                    <div className="breakdown-row">
+                      <span>Missing phone</span>
+                      <span className="breakdown-num">{summary.missingPhone}</span>
+                    </div>
+                  )}
+                  {summary.badPhone > 0 && (
+                    <div className="breakdown-row">
+                      <span>Invalid phone format</span>
+                      <span className="breakdown-num">{summary.badPhone}</span>
+                    </div>
+                  )}
+                  {summary.duplicate > 0 && (
+                    <div className="breakdown-row">
+                      <span>Duplicate phone</span>
+                      <span className="breakdown-num">{summary.duplicate}</span>
+                    </div>
+                  )}
+                  {(summary.missingName + summary.missingPhone + summary.badPhone + summary.duplicate) === 0 && (
+                    <div className="breakdown-row">
+                      <span>No rows removed</span>
+                      <span className="breakdown-num">0</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="card preview-card">
+              <h2>Preview <span className="preview-note">(first 10 rows)</span></h2>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      {cleanedRows.length > 0 && Object.keys(cleanedRows[0]).map(k => (
+                        <th key={k}>{k}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cleanedRows.slice(0, 10).map((row, i) => (
+                      <tr key={i}>
+                        {Object.values(row).map((v, j) => (
+                          <td key={j}>{v}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {removedRows.length > 0 && (
+              <div className="card removed-card">
+                <div className="removed-header" onClick={() => setShowRemoved(v => !v)}>
+                  <h2>Removed Rows <span className="preview-note">({removedRows.length} total)</span></h2>
+                  <span className="toggle-icon">{showRemoved ? '▲' : '▼'}</span>
+                </div>
+                {showRemoved && (
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Reason</th>
+                          {Object.keys(removedRows[0]).filter(k => k !== '_reason').slice(0, 5).map(k => (
+                            <th key={k}>{k}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {removedRows.slice(0, 10).map((row, i) => (
+                          <tr key={i} className="removed-row">
+                            <td><span className="reason-badge">{row._reason}</span></td>
+                            {Object.entries(row).filter(([k]) => k !== '_reason').slice(0, 5).map(([k, v]) => (
+                              <td key={k}>{String(v)}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {removedRows.length > 10 && (
+                      <p className="table-more">…and {removedRows.length - 10} more removed rows</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="action-row">
+              <button className="btn btn-primary btn-lg" onClick={handleExport}>
+                ↓ Export CSV
+              </button>
+              <button className="btn btn-secondary btn-lg" onClick={handleExportXLSX}>
+                ↓ Export XLSX
+              </button>
+              <button className="btn btn-ghost" onClick={reset}>
+                Clean another file
+              </button>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
