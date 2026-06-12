@@ -32,10 +32,17 @@ function parseName(row, normHeaders, rawHeaders) {
   const fnKey = findCol(normHeaders, ['first_name', 'firstname', 'first', 'fname', 'given_name'])
   const lnKey = findCol(normHeaders, ['last_name', 'lastname', 'last', 'lname', 'surname', 'family_name'])
 
-  if (fnKey && lnKey) {
+  // If both first and last name columns exist AND have values, use them
+  if (fnKey && lnKey && firstValue(row[fnKey])) {
     return { first_name: firstValue(row[fnKey]), last_name: firstValue(row[lnKey]) }
   }
 
+  // If only first name exists and has value, use it with empty last name
+  if (fnKey && firstValue(row[fnKey]) && !lnKey) {
+    return { first_name: firstValue(row[fnKey]), last_name: '' }
+  }
+
+  // Try to find a display/business/organization name column as fallback
   const fullKey = findCol(normHeaders, ['full_name', 'fullname', 'contact_name', 'name', 'customer_name', 'client_name', 'display_name', 'displayname', 'company_name', 'organization_name', 'business_name', 'org_name', 'business'])
   if (fullKey && row[fullKey]) {
     const full = firstValue(row[fullKey])
@@ -58,18 +65,6 @@ function parseName(row, normHeaders, rawHeaders) {
 
     // Single word - could be business or first name, default to business name
     return { first_name: full, last_name: '' }
-  }
-
-  if (fnKey) return { first_name: firstValue(row[fnKey]), last_name: '' }
-
-  // Fallback: try to find columns by checking raw headers for "First Name" / "Last Name" text
-  if (rawHeaders && rawHeaders.length >= 2) {
-    const rawFnIdx = rawHeaders.findIndex(h => /first.?name/i.test(h))
-    const rawLnIdx = rawHeaders.findIndex(h => /last.?name|surname/i.test(h))
-    if (rawFnIdx >= 0 && rawLnIdx >= 0) {
-      const headerVals = Object.values(row)
-      return { first_name: firstValue(headerVals[rawFnIdx] || ''), last_name: firstValue(headerVals[rawLnIdx] || '') }
-    }
   }
 
   return { first_name: '', last_name: '' }
