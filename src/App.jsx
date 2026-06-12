@@ -460,7 +460,7 @@ export default function App() {
                     </div>
                   )}
                   {(summary.missingName + summary.missingPhone + summary.badPhone + summary.duplicate) > 0 && (
-                    <div className="breakdown-row" style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '0.75rem', marginTop: '0.75rem', fontWeight: 600 }}>
+                    <div className="breakdown-row" style={{ borderLeft: '3px solid #ef5350', paddingLeft: '0.75rem' }}>
                       <span>Total removed</span>
                       <span className="breakdown-num">{summary.missingName + summary.missingPhone + summary.badPhone + summary.duplicate}</span>
                     </div>
