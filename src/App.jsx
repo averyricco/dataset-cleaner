@@ -308,9 +308,19 @@ export default function App() {
               onDrop={onDrop}
               onClick={() => document.getElementById('file-input').click()}
             >
-              <div className="drop-icon">↑</div>
-              <p>Drag & drop your file here</p>
-              <p className="drop-sub">or click to browse</p>
+              {selectedFile && fileName ? (
+                <>
+                  <div className="drop-icon" style={{ fontSize: '2rem', color: '#4caf50' }}>✓</div>
+                  <p style={{ margin: '0.5rem 0 0 0', fontWeight: 500 }}>{fileName}</p>
+                  <p className="drop-sub">Ready to clean</p>
+                </>
+              ) : (
+                <>
+                  <div className="drop-icon">↑</div>
+                  <p>Drag & drop your file here</p>
+                  <p className="drop-sub">or click to browse</p>
+                </>
+              )}
               <input
                 id="file-input"
                 type="file"
@@ -347,24 +357,6 @@ export default function App() {
             </div>
 
             <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-              {selectedFile && fileName && (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  marginBottom: '1rem',
-                  padding: '0.75rem 1rem',
-                  backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                  borderRadius: '6px',
-                  borderLeft: '3px solid #4caf50'
-                }}>
-                  <span style={{ fontSize: '1.2rem', color: '#4caf50' }}>✓</span>
-                  <div>
-                    <p className="hint" style={{ margin: 0 }}>File ready</p>
-                    <p style={{ margin: '0.25rem 0 0 0', fontWeight: 500 }}>{fileName}</p>
-                  </div>
-                </div>
-              )}
               <button
                 className={`btn btn-lg ${selectedFile ? 'btn-primary' : 'btn-ghost'}`}
                 onClick={processFile}
