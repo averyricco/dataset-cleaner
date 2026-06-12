@@ -346,14 +346,24 @@ export default function App() {
               </p>
             </div>
 
-            {selectedFile && fileName && (
-              <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              {selectedFile && fileName && (
                 <p className="hint" style={{ marginBottom: '1rem' }}>File ready: <strong>{fileName}</strong></p>
-                <button className="btn btn-primary btn-lg" onClick={processFile} style={{ width: '100%' }}>
-                  Clean this file
-                </button>
-              </div>
-            )}
+              )}
+              <button
+                className={`btn btn-lg ${selectedFile ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={processFile}
+                disabled={!selectedFile}
+                style={{
+                  width: '100%',
+                  opacity: selectedFile ? 1 : 0.4,
+                  cursor: selectedFile ? 'pointer' : 'not-allowed',
+                  pointerEvents: selectedFile ? 'auto' : 'none'
+                }}
+              >
+                Clean this file
+              </button>
+            </div>
           </div>
         )}
 
