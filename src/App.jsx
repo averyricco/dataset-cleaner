@@ -348,7 +348,22 @@ export default function App() {
 
             <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
               {selectedFile && fileName && (
-                <p className="hint" style={{ marginBottom: '1rem' }}>File ready: <strong>{fileName}</strong></p>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  marginBottom: '1rem',
+                  padding: '0.75rem 1rem',
+                  backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                  borderRadius: '6px',
+                  borderLeft: '3px solid #4caf50'
+                }}>
+                  <span style={{ fontSize: '1.2rem', color: '#4caf50' }}>✓</span>
+                  <div>
+                    <p className="hint" style={{ margin: 0 }}>File ready</p>
+                    <p style={{ margin: '0.25rem 0 0 0', fontWeight: 500 }}>{fileName}</p>
+                  </div>
+                </div>
               )}
               <button
                 className={`btn btn-lg ${selectedFile ? 'btn-primary' : 'btn-ghost'}`}
