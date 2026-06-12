@@ -321,6 +321,21 @@ export default function App() {
                 <li>Drop irrelevant columns</li>
               </ul>
             </div>
+
+            <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <p className="tag-question">Contact method priority:</p>
+              <div className="btn-row">
+                <button className={`btn ${!prioritizeEmail ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrioritizeEmail(false)}>
+                  Phone required
+                </button>
+                <button className={`btn ${prioritizeEmail ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrioritizeEmail(true)}>
+                  Prioritize email
+                </button>
+              </div>
+              <p className="hint" style={{ marginTop: '0.5rem' }}>
+                {prioritizeEmail ? '✓ Keeps contacts that have email addresses, even without phone numbers (useful for email campaigns)' : 'Removes any contacts missing a valid phone number'}
+              </p>
+            </div>
           </div>
         )}
 
@@ -337,21 +352,6 @@ export default function App() {
             <div className="btn-row">
               <button className="btn btn-primary" onClick={() => confirmTags(true)}>Keep tags</button>
               <button className="btn btn-ghost" onClick={() => confirmTags(false)}>Drop tags</button>
-            </div>
-
-            <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-              <p className="tag-question">How should we handle contacts without phone numbers?</p>
-              <div className="btn-row">
-                <button className={`btn ${!prioritizeEmail ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrioritizeEmail(false)}>
-                  Phone required
-                </button>
-                <button className={`btn ${prioritizeEmail ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrioritizeEmail(true)}>
-                  Prioritize email
-                </button>
-              </div>
-              <p className="hint" style={{ marginTop: '0.5rem' }}>
-                {prioritizeEmail ? '✓ Keeps contacts that have email addresses, even without phone numbers (useful for email campaigns)' : 'Removes any contacts missing a valid phone number'}
-              </p>
             </div>
           </div>
         )}
