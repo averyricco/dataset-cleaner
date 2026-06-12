@@ -343,17 +343,34 @@ export default function App() {
 
             <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
               <p className="tag-question">Contact method priority:</p>
-              <div className="btn-row">
-                <button className={`btn ${!prioritizeEmail ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrioritizeEmail(false)}>
-                  Phone required
-                </button>
-                <button className={`btn ${prioritizeEmail ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrioritizeEmail(true)}>
-                  Prioritize email
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', padding: '0.75rem', borderRadius: '6px', backgroundColor: !prioritizeEmail ? 'rgba(76, 175, 80, 0.1)' : 'transparent', border: !prioritizeEmail ? '1px solid rgba(76, 175, 80, 0.3)' : '1px solid rgba(255,255,255,0.1)', transition: 'all 0.2s' }}>
+                  <input
+                    type="radio"
+                    name="contactMethod"
+                    checked={!prioritizeEmail}
+                    onChange={() => setPrioritizeEmail(false)}
+                    style={{ marginTop: '0.25rem', cursor: 'pointer' }}
+                  />
+                  <div>
+                    <p style={{ margin: '0 0 0.25rem 0', fontWeight: 500 }}>Phone required</p>
+                    <p className="hint" style={{ margin: 0 }}>Removes any contacts missing a valid phone number</p>
+                  </div>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', padding: '0.75rem', borderRadius: '6px', backgroundColor: prioritizeEmail ? 'rgba(76, 175, 80, 0.1)' : 'transparent', border: prioritizeEmail ? '1px solid rgba(76, 175, 80, 0.3)' : '1px solid rgba(255,255,255,0.1)', transition: 'all 0.2s' }}>
+                  <input
+                    type="radio"
+                    name="contactMethod"
+                    checked={prioritizeEmail}
+                    onChange={() => setPrioritizeEmail(true)}
+                    style={{ marginTop: '0.25rem', cursor: 'pointer' }}
+                  />
+                  <div>
+                    <p style={{ margin: '0 0 0.25rem 0', fontWeight: 500 }}>Prioritize email</p>
+                    <p className="hint" style={{ margin: 0 }}>Keeps contacts that have email addresses, even without phone numbers (useful for email campaigns)</p>
+                  </div>
+                </label>
               </div>
-              <p className="hint" style={{ marginTop: '0.5rem' }}>
-                {prioritizeEmail ? '✓ Keeps contacts that have email addresses, even without phone numbers (useful for email campaigns)' : 'Removes any contacts missing a valid phone number'}
-              </p>
             </div>
 
             <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
