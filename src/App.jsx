@@ -66,7 +66,7 @@ function isTagColumn(header) {
   return /tag|label|category|group|segment/i.test(header)
 }
 
-function cleanData(rows, rawHeaders, keepTagCols) {
+function cleanData(rows, rawHeaders, keepTagCols, prioritizeEmail) {
   const normHeaders = rawHeaders.map(normalizeHeader)
   const tagCols = rawHeaders.filter((_, i) => isTagColumn(normHeaders[i]))
   const tagColsNorm = tagCols.map(normalizeHeader)
@@ -77,6 +77,7 @@ function cleanData(rows, rawHeaders, keepTagCols) {
     missingPhone: 0,
     badPhone: 0,
     duplicate: 0,
+    emailOnly: 0,
     final: 0,
   }
 
@@ -102,27 +103,39 @@ function cleanData(rows, rawHeaders, keepTagCols) {
 
     const phoneRaw = phoneKey ? firstValue(row[phoneKey]) : ''
     const phone = formatE164(phoneRaw)
+    const emailRaw = emailKey ? (row[emailKey] || '') : ''
+    const email = firstValue(emailRaw)
 
-    if (!phoneRaw) {
-      summary.missingPhone++
-      removed.push({ ...row, _reason: 'Missing phone' })
-      continue
-    }
-    if (!phone) {
-      summary.badPhone++
-      removed.push({ ...row, _reason: 'Invalid phone format' })
-      continue
-    }
+    const hasPhone = !!phoneRaw
+    const hasValidPhone = !!phone
+    const hasEmail = !!email
 
-    if (seenPhones.has(phone)) {
+    // Check phone requirement
+    if (!hasPhone) {
+      if (prioritizeEmail && hasEmail) {
+        // Email-only contact is allowed
+        summary.emailOnly++
+      } else {
+        summary.missingPhone++
+        removed.push({ ...row, _reason: 'Missing phone and email' })
+        continue
+      }
+    } else if (!hasValidPhone) {
+      if (prioritizeEmail && hasEmail) {
+        // Invalid phone but has email - keep it
+        summary.emailOnly++
+      } else {
+        summary.badPhone++
+        removed.push({ ...row, _reason: 'Invalid phone format' })
+        continue
+      }
+    } else if (seenPhones.has(phone)) {
       summary.duplicate++
       removed.push({ ...row, _reason: 'Duplicate phone' })
       continue
+    } else {
+      seenPhones.add(phone)
     }
-    seenPhones.add(phone)
-
-    const emailRaw = emailKey ? (row[emailKey] || '') : ''
-    const email = firstValue(emailRaw)
 
     const out = { first_name, last_name, phone, email }
 
@@ -166,6 +179,7 @@ export default function App() {
   const [rawHeaders, setRawHeaders] = useState([])
   const [detectedTagCols, setDetectedTagCols] = useState([])
   const [keepTags, setKeepTags] = useState(true)
+  const [prioritizeEmail, setPrioritizeEmail] = useState(false)
   const [cleanedRows, setCleanedRows] = useState([])
   const [removedRows, setRemovedRows] = useState([])
   const [summary, setSummary] = useState(null)
@@ -211,7 +225,7 @@ export default function App() {
       if (tagCols.length > 0) {
         setStage('tag-confirm')
       } else {
-        const { cleaned, removed, summary } = cleanData(rows, headers, false)
+        const { cleaned, removed, summary } = cleanData(rows, headers, false, prioritizeEmail)
         setCleanedRows(cleaned)
         setRemovedRows(removed)
         setSummary(summary)
@@ -235,7 +249,7 @@ export default function App() {
 
   const confirmTags = (keep) => {
     setKeepTags(keep)
-    const { cleaned, removed, summary } = cleanData(rawRows, rawHeaders, keep)
+    const { cleaned, removed, summary } = cleanData(rawRows, rawHeaders, keep, prioritizeEmail)
     setCleanedRows(cleaned)
     setRemovedRows(removed)
     setSummary(summary)
@@ -324,6 +338,21 @@ export default function App() {
               <button className="btn btn-primary" onClick={() => confirmTags(true)}>Keep tags</button>
               <button className="btn btn-ghost" onClick={() => confirmTags(false)}>Drop tags</button>
             </div>
+
+            <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <p className="tag-question">Contact method priority:</p>
+              <div className="btn-row">
+                <button className={`btn ${!prioritizeEmail ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrioritizeEmail(false)}>
+                  Phone required
+                </button>
+                <button className={`btn ${prioritizeEmail ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrioritizeEmail(true)}>
+                  Allow email-only
+                </button>
+              </div>
+              <p className="hint" style={{ marginTop: '0.5rem' }}>
+                {prioritizeEmail ? '✓ Will keep contacts with email but no phone' : 'Will remove contacts without phone'}
+              </p>
+            </div>
           </div>
         )}
 
@@ -370,6 +399,12 @@ export default function App() {
                     <div className="breakdown-row">
                       <span>Duplicate phone</span>
                       <span className="breakdown-num">{summary.duplicate}</span>
+                    </div>
+                  )}
+                  {summary.emailOnly > 0 && (
+                    <div className="breakdown-row" style={{ color: '#64b5f6' }}>
+                      <span>Email-only contacts (no phone)</span>
+                      <span className="breakdown-num">{summary.emailOnly}</span>
                     </div>
                   )}
                   {(summary.missingName + summary.missingPhone + summary.badPhone + summary.duplicate) === 0 && (
