@@ -417,13 +417,13 @@ export default function App() {
                   <span className="stat-num">{summary.started}</span>
                   <span className="stat-label">Rows started</span>
                 </div>
-                <div className="stat stat-final">
-                  <span className="stat-num">{summary.final}</span>
-                  <span className="stat-label">Final rows</span>
-                </div>
                 <div className="stat stat-removed">
                   <span className="stat-num">{summary.started - summary.final}</span>
                   <span className="stat-label">Rows removed</span>
+                </div>
+                <div className="stat stat-final">
+                  <span className="stat-num">{summary.final}</span>
+                  <span className="stat-label">Final rows</span>
                 </div>
               </div>
               <div className="breakdown">
