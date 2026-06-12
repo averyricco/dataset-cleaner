@@ -340,7 +340,7 @@ export default function App() {
             </div>
 
             <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-              <p className="tag-question">Contact method priority:</p>
+              <p className="tag-question">How should we handle contacts without phone numbers?</p>
               <div className="btn-row">
                 <button className={`btn ${!prioritizeEmail ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrioritizeEmail(false)}>
                   Phone required
@@ -350,7 +350,7 @@ export default function App() {
                 </button>
               </div>
               <p className="hint" style={{ marginTop: '0.5rem' }}>
-                {prioritizeEmail ? '✓ Will keep contacts with email but no phone' : 'Will remove contacts without phone'}
+                {prioritizeEmail ? '✓ Keeps contacts that have email addresses, even without phone numbers (useful for email campaigns)' : 'Removes any contacts missing a valid phone number'}
               </p>
             </div>
           </div>
