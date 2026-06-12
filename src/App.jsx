@@ -463,8 +463,9 @@ export default function App() {
               </div>
 
               {summary.emailOnly > 0 && (
-                <div className="breakdown">
+                <div className="breakdown" style={{ marginTop: '1.5rem' }}>
                   <h3>Kept (email-only)</h3>
+                  <p className="hint" style={{ marginBottom: '1rem' }}>These contacts were kept because they have email addresses but no phone numbers. This is due to the "Prioritize email" option you selected.</p>
                   <div className="breakdown-rows">
                     <div className="breakdown-row" style={{ color: '#64b5f6' }}>
                       <span>Email-only contacts (no phone)</span>
