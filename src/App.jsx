@@ -346,7 +346,7 @@ export default function App() {
                   Phone required
                 </button>
                 <button className={`btn ${prioritizeEmail ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPrioritizeEmail(true)}>
-                  Allow email-only
+                  Prioritize email
                 </button>
               </div>
               <p className="hint" style={{ marginTop: '0.5rem' }}>
