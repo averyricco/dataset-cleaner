@@ -36,15 +36,28 @@ function parseName(row, normHeaders, rawHeaders) {
     return { first_name: firstValue(row[fnKey]), last_name: firstValue(row[lnKey]) }
   }
 
-  const fullKey = findCol(normHeaders, ['full_name', 'fullname', 'contact_name', 'name', 'customer_name', 'client_name', 'display_name', 'displayname', 'company_name'])
+  const fullKey = findCol(normHeaders, ['full_name', 'fullname', 'contact_name', 'name', 'customer_name', 'client_name', 'display_name', 'displayname', 'company_name', 'organization_name', 'business_name', 'org_name', 'business'])
   if (fullKey && row[fullKey]) {
     const full = firstValue(row[fullKey])
+
+    // Check if it's a comma-separated name (likely "Last, First")
     if (full.includes(',')) {
       const [last, first] = full.split(',').map(s => s.trim())
       return { first_name: first || '', last_name: last || '' }
     }
-    const parts = full.trim().split(/\s+/)
-    return { first_name: parts[0] || '', last_name: parts.slice(1).join(' ') || '' }
+
+    // Check if it looks like a business name (has business keywords or multiple words)
+    const businessKeywords = /\b(inc|llc|corp|co\.|ltd|company|contractors|services|group|associates|partners|llp|pllc|agency|solutions|systems|networks|studios|works|house|store|shop|market|center|park|plaza|village)\b/i
+    const hasBusinessKeyword = businessKeywords.test(full)
+    const wordCount = full.trim().split(/\s+/).length
+
+    // If it has business keywords or is multiple words, treat as business name
+    if (hasBusinessKeyword || wordCount >= 2) {
+      return { first_name: full, last_name: '' }
+    }
+
+    // Single word - could be business or first name, default to business name
+    return { first_name: full, last_name: '' }
   }
 
   if (fnKey) return { first_name: firstValue(row[fnKey]), last_name: '' }
