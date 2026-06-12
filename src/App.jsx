@@ -43,7 +43,8 @@ function parseName(row, normHeaders, rawHeaders) {
   }
 
   // Try to find a display/business/organization name column as fallback
-  const fullKey = findCol(normHeaders, ['full_name', 'fullname', 'contact_name', 'name', 'customer_name', 'client_name', 'display_name', 'displayname', 'company_name', 'organization_name', 'business_name', 'org_name', 'business'])
+  // More specific patterns first, and exclude fnKey/lnKey to avoid matching those again
+  const fullKey = findCol(normHeaders.filter((h, i) => h !== fnKey && h !== lnKey), ['display_name', 'displayname', 'organization_name', 'business_name', 'org_name', 'company_name', 'business', 'full_name', 'fullname', 'contact_name', 'customer_name', 'client_name', 'name'])
   if (fullKey && row[fullKey]) {
     const full = firstValue(row[fullKey])
 
