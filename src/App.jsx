@@ -27,7 +27,7 @@ function formatE164(raw) {
 function firstValue(val) {
   if (val == null) return ''
   const s = String(val).trim()
-  return s.split(/[;|]/)[0].trim()
+  return s.split(/[;|,]/)[0].trim()
 }
 
 function parseName(row, normHeaders, rawHeaders) {
