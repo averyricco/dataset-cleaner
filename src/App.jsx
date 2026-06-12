@@ -223,7 +223,9 @@ export default function App() {
   }, [])
 
   const processFile = () => {
-    if (!selectedFile) return
+    if (!selectedFile || !fileName) {
+      return
+    }
 
     const { rows, headers } = selectedFile
     setRawRows(rows)
