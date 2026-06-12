@@ -16,11 +16,9 @@ function findCol(headers, patterns) {
 function formatE164(raw) {
   if (!raw) return null
   const digits = String(raw).replace(/\D/g, '')
-  // Only accept phone numbers that are reasonable lengths
-  // 10 digits (US), 11 digits (US with 1), or 7-15 digits (international)
+  // Only accept valid US/Canada phone numbers
   if (digits.length === 10) return '+1' + digits
   if (digits.length === 11 && digits[0] === '1') return '+' + digits
-  if (digits.length >= 7 && digits.length <= 15) return '+' + digits
   return null
 }
 
