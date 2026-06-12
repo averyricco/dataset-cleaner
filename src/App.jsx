@@ -437,7 +437,7 @@ export default function App() {
                   )}
                   {summary.missingPhone > 0 && (
                     <div className="breakdown-row">
-                      <span>Missing phone</span>
+                      <span>Missing phone and email</span>
                       <span className="breakdown-num">{summary.missingPhone}</span>
                     </div>
                   )}
@@ -453,12 +453,6 @@ export default function App() {
                       <span className="breakdown-num">{summary.duplicate}</span>
                     </div>
                   )}
-                  {summary.emailOnly > 0 && (
-                    <div className="breakdown-row" style={{ color: '#64b5f6' }}>
-                      <span>Email-only contacts (no phone)</span>
-                      <span className="breakdown-num">{summary.emailOnly}</span>
-                    </div>
-                  )}
                   {(summary.missingName + summary.missingPhone + summary.badPhone + summary.duplicate) === 0 && (
                     <div className="breakdown-row">
                       <span>No rows removed</span>
@@ -467,6 +461,18 @@ export default function App() {
                   )}
                 </div>
               </div>
+
+              {summary.emailOnly > 0 && (
+                <div className="breakdown">
+                  <h3>Kept (email-only)</h3>
+                  <div className="breakdown-rows">
+                    <div className="breakdown-row" style={{ color: '#64b5f6' }}>
+                      <span>Email-only contacts (no phone)</span>
+                      <span className="breakdown-num">{summary.emailOnly}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="card preview-card">
