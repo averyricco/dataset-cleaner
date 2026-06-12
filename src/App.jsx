@@ -36,7 +36,7 @@ function parseName(row, normHeaders, rawHeaders) {
     return { first_name: firstValue(row[fnKey]), last_name: firstValue(row[lnKey]) }
   }
 
-  const fullKey = findCol(normHeaders, ['full_name', 'fullname', 'contact_name', 'name', 'customer_name', 'client_name'])
+  const fullKey = findCol(normHeaders, ['full_name', 'fullname', 'contact_name', 'name', 'customer_name', 'client_name', 'display_name', 'displayname', 'company_name'])
   if (fullKey && row[fullKey]) {
     const full = firstValue(row[fullKey])
     if (full.includes(',')) {
