@@ -28,18 +28,27 @@ function firstValue(val) {
   return s.split(/[;|,]/)[0].trim()
 }
 
+function normalizeNameCase(name) {
+  if (!name) return name
+  const letters = name.replace(/[^a-z]/gi, '')
+  if (!letters) return name
+  const isAllCaps = letters === letters.toUpperCase()
+  if (!isAllCaps) return name
+  return name.split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ')
+}
+
 function parseName(row, normHeaders, rawHeaders) {
   const fnKey = findCol(normHeaders, ['first_name', 'firstname', 'first', 'fname', 'given_name'])
   const lnKey = findCol(normHeaders, ['last_name', 'lastname', 'last', 'lname', 'surname', 'family_name'])
 
   // If both first and last name columns exist AND have values, use them
   if (fnKey && lnKey && firstValue(row[fnKey])) {
-    return { first_name: firstValue(row[fnKey]), last_name: firstValue(row[lnKey]) }
+    return { first_name: normalizeNameCase(firstValue(row[fnKey])), last_name: normalizeNameCase(firstValue(row[lnKey])) }
   }
 
   // If only first name exists and has value, use it with empty last name
   if (fnKey && firstValue(row[fnKey]) && !lnKey) {
-    return { first_name: firstValue(row[fnKey]), last_name: '' }
+    return { first_name: normalizeNameCase(firstValue(row[fnKey])), last_name: '' }
   }
 
   // Try to find a display/business/organization name column as fallback
@@ -51,7 +60,7 @@ function parseName(row, normHeaders, rawHeaders) {
     // Check if it's a comma-separated name (likely "Last, First")
     if (full.includes(',')) {
       const [last, first] = full.split(',').map(s => s.trim())
-      return { first_name: first || '', last_name: last || '' }
+      return { first_name: normalizeNameCase(first || ''), last_name: normalizeNameCase(last || '') }
     }
 
     // Check if it looks like a business name (has business keywords or multiple words)
@@ -61,11 +70,11 @@ function parseName(row, normHeaders, rawHeaders) {
 
     // If it has business keywords or is multiple words, treat as business name
     if (hasBusinessKeyword || wordCount >= 2) {
-      return { first_name: full, last_name: '' }
+      return { first_name: normalizeNameCase(full), last_name: '' }
     }
 
     // Single word - could be business or first name, default to business name
-    return { first_name: full, last_name: '' }
+    return { first_name: normalizeNameCase(full), last_name: '' }
   }
 
   return { first_name: '', last_name: '' }
