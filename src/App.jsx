@@ -175,6 +175,7 @@ export default function App() {
   const [stage, setStage] = useState('upload') // upload | tag-confirm | result
   const [dragOver, setDragOver] = useState(false)
   const [fileName, setFileName] = useState('')
+  const [selectedFile, setSelectedFile] = useState(null)
   const [rawRows, setRawRows] = useState([])
   const [rawHeaders, setRawHeaders] = useState([])
   const [detectedTagCols, setDetectedTagCols] = useState([])
@@ -215,25 +216,33 @@ export default function App() {
         })
       }
 
-      setRawRows(rows)
-      setRawHeaders(headers)
-
-      const normHeaders = headers.map(normalizeHeader)
-      const tagCols = headers.filter((_, i) => isTagColumn(normHeaders[i]))
-      setDetectedTagCols(tagCols)
-
-      if (tagCols.length > 0) {
-        setStage('tag-confirm')
-      } else {
-        const { cleaned, removed, summary } = cleanData(rows, headers, false, prioritizeEmail)
-        setCleanedRows(cleaned)
-        setRemovedRows(removed)
-        setSummary(summary)
-        setStage('result')
-      }
+      // Store file data but don't process yet
+      setSelectedFile({ rows, headers })
     }
     reader.readAsArrayBuffer(file)
   }, [])
+
+  const processFile = () => {
+    if (!selectedFile) return
+
+    const { rows, headers } = selectedFile
+    setRawRows(rows)
+    setRawHeaders(headers)
+
+    const normHeaders = headers.map(normalizeHeader)
+    const tagCols = headers.filter((_, i) => isTagColumn(normHeaders[i]))
+    setDetectedTagCols(tagCols)
+
+    if (tagCols.length > 0) {
+      setStage('tag-confirm')
+    } else {
+      const { cleaned, removed, summary } = cleanData(rows, headers, false, prioritizeEmail)
+      setCleanedRows(cleaned)
+      setRemovedRows(removed)
+      setSummary(summary)
+      setStage('result')
+    }
+  }
 
   const onDrop = useCallback((e) => {
     e.preventDefault()
@@ -336,6 +345,15 @@ export default function App() {
                 {prioritizeEmail ? '✓ Keeps contacts that have email addresses, even without phone numbers (useful for email campaigns)' : 'Removes any contacts missing a valid phone number'}
               </p>
             </div>
+
+            {selectedFile && fileName && (
+              <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <p className="hint" style={{ marginBottom: '1rem' }}>File ready: <strong>{fileName}</strong></p>
+                <button className="btn btn-primary btn-lg" onClick={processFile} style={{ width: '100%' }}>
+                  Clean this file
+                </button>
+              </div>
+            )}
           </div>
         )}
 
