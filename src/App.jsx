@@ -63,13 +63,14 @@ function parseName(row, normHeaders, rawHeaders) {
       return { first_name: normalizeNameCase(first || ''), last_name: normalizeNameCase(last || '') }
     }
 
-    // Check if it looks like a business name (has business keywords)
+    // Check if it looks like a business name (has business keywords or "&")
     const businessKeywords = /\b(inc|llc|corp|co\.|ltd|company|contractors|services|group|associates|partners|llp|pllc|agency|solutions|systems|networks|studios|works|house|store|shop|market|center|park|plaza|village)\b/i
     const hasBusinessKeyword = businessKeywords.test(full)
+    const hasAmpersand = full.includes('&')
     const words = full.trim().split(/\s+/)
 
-    // If it has business keywords, treat as business name
-    if (hasBusinessKeyword) {
+    // If it has business keywords or "&", treat as business name
+    if (hasBusinessKeyword || hasAmpersand) {
       return { first_name: normalizeNameCase(full), last_name: '' }
     }
 
