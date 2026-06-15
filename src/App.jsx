@@ -63,17 +63,24 @@ function parseName(row, normHeaders, rawHeaders) {
       return { first_name: normalizeNameCase(first || ''), last_name: normalizeNameCase(last || '') }
     }
 
-    // Check if it looks like a business name (has business keywords or multiple words)
+    // Check if it looks like a business name (has business keywords)
     const businessKeywords = /\b(inc|llc|corp|co\.|ltd|company|contractors|services|group|associates|partners|llp|pllc|agency|solutions|systems|networks|studios|works|house|store|shop|market|center|park|plaza|village)\b/i
     const hasBusinessKeyword = businessKeywords.test(full)
-    const wordCount = full.trim().split(/\s+/).length
+    const words = full.trim().split(/\s+/)
 
-    // If it has business keywords or is multiple words, treat as business name
-    if (hasBusinessKeyword || wordCount >= 2) {
+    // If it has business keywords, treat as business name
+    if (hasBusinessKeyword) {
       return { first_name: normalizeNameCase(full), last_name: '' }
     }
 
-    // Single word - could be business or first name, default to business name
+    // For non-business names with multiple words, split into first and last
+    if (words.length >= 2) {
+      const firstName = words[0]
+      const lastName = words.slice(1).join(' ')
+      return { first_name: normalizeNameCase(firstName), last_name: normalizeNameCase(lastName) }
+    }
+
+    // Single word - default to first name only
     return { first_name: normalizeNameCase(full), last_name: '' }
   }
 
