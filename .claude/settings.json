@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "Get-Process | Where-Object { $_.ProcessName -eq 'node' -and $_.Id -ne (Get-Content (Join-Path $env:TEMP '*contact-list*pid*.txt') -ErrorAction SilentlyContinue) } | Stop-Process -Force -ErrorAction SilentlyContinue; echo 'Cleaned up background servers'",
+            "shell": "powershell",
+            "statusMessage": "Cleaning up background servers...",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}
